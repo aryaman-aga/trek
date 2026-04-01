@@ -209,15 +209,28 @@ github_token = os.environ.get("GITHUB_PAT")
 if not github_token:
     st.info("Please set the `GITHUB_PAT` environment variable in Render to view cloud scrape results.")
 else:
-    if st.button("🔄 Refresh Cloud Data"):
-        pass
-
     repo = "aryaman-aga/trek"
     url = f"https://api.github.com/repos/{repo}/actions/artifacts"
     heads = {
         "Authorization": f"Bearer {github_token}",
         "Accept": "application/vnd.github.v3+json"
     }
+
+    colA, colB = st.columns([1, 1])
+    with colA:
+        if st.button("🔄 Refresh Cloud Data"):
+            pass
+    with colB:
+        if st.button("🗑️ Delete All"):
+            with st.spinner("Deleting all artifacts on GitHub..."):
+                del_resp = requests.get(url, headers=heads)
+                if del_resp.status_code == 200:
+                    artifacts_to_del = del_resp.json().get("artifacts", [])
+                    for a in artifacts_to_del:
+                        requests.delete(f"https://api.github.com/repos/{repo}/actions/artifacts/{a['id']}", headers=heads)
+                    st.success("Deleted all scrapes!")
+                    time.sleep(1)
+                    st.rerun()
 
     try:
         resp = requests.get(url, headers=heads)
