@@ -3,6 +3,7 @@ import subprocess
 import os
 import sys
 import re
+import time
 from datetime import datetime
 import uuid
 
@@ -93,6 +94,8 @@ if st.button("🚀 Run Scraper & Download"):
         args.extend(["--out", unique_output_file])
             
         try:
+            start_time = time.time()
+            
             # Run the subprocess and stream the output
             process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
             
@@ -107,7 +110,22 @@ if st.button("🚀 Run Scraper & Download"):
                     completed_count += 1
                     pct = min(completed_count / total_count, 1.0)
                     progress_bar.progress(pct)
-                    status_text.info(f"Processing... {completed_count}/{total_count} brands completed.")
+                    
+                    # Calculate ETA
+                    elapsed_time = time.time() - start_time
+                    time_per_brand = elapsed_time / completed_count
+                    brands_left = total_count - completed_count
+                    eta_seconds = int(brands_left * time_per_brand)
+                    
+                    if eta_seconds > 60:
+                        eta_str = f"{eta_seconds // 60}m {eta_seconds % 60}s"
+                    else:
+                        eta_str = f"{eta_seconds}s"
+                    
+                    if completed_count < total_count:
+                        status_text.info(f"Processing... {completed_count}/{total_count} brands completed. ETA: ~{eta_str} left")
+                    else:
+                        status_text.info(f"Processing... {completed_count}/{total_count} brands completed.")
                     
                 # Update logs periodically to avoid slowing down UI
                 if len(logs) % 5 == 0:
