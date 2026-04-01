@@ -67,7 +67,51 @@ convert_to_inr = st.checkbox("🔄 Convert foreign rates to Indian Rupees (INR)"
 
 # --- 4. Execution ---
 st.write("---")
-if st.button("🚀 Run Scraper & Download"):
+
+col1, col2 = st.columns(2)
+
+with col1:
+    run_local = st.button("🚀 Run Local (Slower)", help="Runs on Render. Could crash if multiple users click at once.")
+
+with col2:
+    run_cloud = st.button("☁️ Queue API Cloud Job (Fast)", help="Uses GitHub Actions to scrape. Will be available under GitHub Actions tab in 2 minutes.")
+
+if run_cloud:
+    if not selected_brands:
+        st.warning("Please select at least one brand before running.")
+    else:
+        # GitHub trigger
+        github_token = os.environ.get("GITHUB_PAT")
+        if not github_token:
+            st.error("Missing GITHUB_PAT. Add a GitHub Personal Access Token to Render environment variables to use this feature.")
+        else:
+            import requests
+
+            status_text = st.empty()
+            status_text.info("Queuing job in GitHub Actions...")
+            repo = "aryaman-aga/trek"
+            workflow_id = "scrape_worker.yml"
+            url = f"https://api.github.com/repos/{repo}/actions/workflows/{workflow_id}/dispatches"
+            heads = {
+                "Authorization": f"Bearer {github_token}",
+                "Accept": "application/vnd.github.v3+json"
+            }
+            payload = {
+                "ref": "main",
+                "inputs": {
+                    "script": script_file,
+                    "brands": " ".join([b.lower() for b in selected_brands]),
+                    "convert_to_inr": "true" if convert_to_inr else "false"
+                }
+            }
+            resp = requests.post(url, headers=heads, json=payload)
+            if resp.status_code == 204:
+                status_text.success(f"✅ Job sent successfully! The data will be ready under 'Actions' -> 'Background Scraper Worker' in your repo in a few minutes.")
+                st.markdown(f"[View Job Status Here](https://github.com/{repo}/actions)")
+            else:
+                status_text.error(f"Failed to queue job: {resp.text}")
+
+if run_local:
     if not selected_brands:
         st.warning("Please select at least one brand before running.")
     else:
