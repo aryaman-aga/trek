@@ -196,3 +196,141 @@ if run_local:
                 st.write("Please check the Live Logs above for details.")
         except Exception as e:
             status_text.error(f"Failed to execute the script: {str(e)}")
+
+# --- 5. Download Cloud Scrapes ---
+st.write("---")
+st.subheader("📥 Recent Cloud Scrapes")
+st.markdown("If you queued a cloud job, you can download the completed Excel reports below.")
+
+github_token = os.environ.get("GITHUB_PAT")
+if not github_token:
+    st.info("Please set the `GITHUB_PAT` environment variable in Render to view cloud scrape results.")
+else:
+    if st.button("🔄 Refresh Cloud Data"):
+        pass
+
+    repo = "aryaman-aga/trek"
+    url = f"https://api.github.com/repos/{repo}/actions/artifacts"
+    heads = {
+        "Authorization": f"Bearer {github_token}",
+        "Accept": "application/vnd.github.v3+json"
+    }
+
+    try:
+        resp = requests.get(url, headers=heads)
+        if resp.status_code == 200:
+            artifacts = resp.json().get("artifacts", [])
+            if not artifacts:
+                st.write("No scripts have completed yet.")
+            else:
+                for art in artifacts[:5]:  # Show local recent artifacts
+                    col1, col2, col3 = st.columns([4, 4, 3])
+                    
+                    with col1:
+                        st.write(f"📁 **{art['name']}**")
+                    with col2:
+                        try:
+                            # Format nicely
+                            dt = datetime.strptime(art['created_at'], "%Y-%m-%dT%H:%M:%SZ")
+                            st.write(f"⏰ {dt.strftime('%b %d, %H:%M UTC')}")
+                        except:
+                            st.write(art['created_at'])
+                            
+                    with col3:
+                        if st.button("Fetch", key=f"fetch_{art['id']}"):
+                            with st.spinner("Downloading artifact..."):
+                                zip_resp = requests.get(art['archive_download_url'], headers=heads)
+                                if zip_resp.status_code == 200:
+                                    # Unzip in memory to extract the xlsx file
+                                    with zipfile.ZipFile(io.BytesIO(zip_resp.content)) as z:
+                                        xlsx_files = [f for f in z.namelist() if f.endswith(".xlsx")]
+                                        if xlsx_files:
+                                            target_file = xlsx_files[0]
+                                            file_data = z.read(target_file)
+                                            st.download_button(
+                                                label="📥 Download Excel",
+                                                data=file_data,
+                                                file_name=target_file,
+                                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                                key=f"dl_{art['id']}"
+                                            )
+                                        else:
+                                            st.warning("No Excel file found inside this artifact.")
+                                else:
+                                    st.error("Failed to download zip from GitHub.")
+        elif resp.status_code in (401, 403):
+             st.error("GitHub access denied. Make sure your GITHUB_PAT is correct and has the `workflow` scope.")
+        else:
+             st.error(f"Failed to fetch list. Status: {resp.status_code}")
+             
+    except Exception as e:
+        st.error(f"An error occurred fetching results: {str(e)}")
+
+# --- 5. Download Cloud Scrapes ---
+st.write("---")
+st.subheader("📥 Recent Cloud Scrapes")
+st.markdown("If you queued a cloud job, you can download the completed Excel reports below.")
+
+github_token = os.environ.get("GITHUB_PAT")
+if not github_token:
+    st.info("Please set the `GITHUB_PAT` environment variable in Render to view cloud scrape results.")
+else:
+    if st.button("🔄 Refresh Cloud Data"):
+        pass
+
+    repo = "aryaman-aga/trek"
+    url = f"https://api.github.com/repos/{repo}/actions/artifacts"
+    heads = {
+        "Authorization": f"Bearer {github_token}",
+        "Accept": "application/vnd.github.v3+json"
+    }
+
+    try:
+        resp = requests.get(url, headers=heads)
+        if resp.status_code == 200:
+            artifacts = resp.json().get("artifacts", [])
+            if not artifacts:
+                st.write("No scripts have completed yet.")
+            else:
+                for art in artifacts[:5]:  # Show local recent artifacts
+                    col1, col2, col3 = st.columns([4, 4, 3])
+                    
+                    with col1:
+                        st.write(f"📁 **{art['name']}**")
+                    with col2:
+                        try:
+                            # Format nicely
+                            dt = datetime.strptime(art['created_at'], "%Y-%m-%dT%H:%M:%SZ")
+                            st.write(f"⏰ {dt.strftime('%b %d, %H:%M UTC')}")
+                        except:
+                            st.write(art['created_at'])
+                            
+                    with col3:
+                        if st.button("Fetch details", key=f"fetch_{art['id']}"):
+                            with st.spinner("Downloading artifact..."):
+                                zip_resp = requests.get(art['archive_download_url'], headers=heads)
+                                if zip_resp.status_code == 200:
+                                    # Unzip in memory to extract the xlsx file
+                                    with zipfile.ZipFile(io.BytesIO(zip_resp.content)) as z:
+                                        xlsx_files = [f for f in z.namelist() if f.endswith(".xlsx")]
+                                        if xlsx_files:
+                                            target_file = xlsx_files[0]
+                                            file_data = z.read(target_file)
+                                            st.download_button(
+                                                label="📥 Download Excel",
+                                                data=file_data,
+                                                file_name=target_file,
+                                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                                key=f"dl_{art['id']}"
+                                            )
+                                        else:
+                                            st.warning("No Excel file found inside this artifact.")
+                                else:
+                                    st.error("Failed to download zip from GitHub.")
+        elif resp.status_code in (401, 403):
+             st.error("GitHub access denied. Make sure your GITHUB_PAT is correct and has the `workflow` scope.")
+        else:
+             st.error(f"Failed to fetch list. Status: {resp.status_code}")
+             
+    except Exception as e:
+        st.error(f"An error occurred fetching results: {str(e)}")
